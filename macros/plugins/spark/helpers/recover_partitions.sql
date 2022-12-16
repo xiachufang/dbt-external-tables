@@ -1,7 +1,7 @@
 {% macro spark__recover_partitions(source_node) %}
     {# https://docs.databricks.com/sql/language-manual/sql-ref-syntax-ddl-alter-table.html #}
 
-    {%- if source_node.external.partitions and source_node.external.using and source_node.external.using|lower != 'delta' -%}
+    {%- if source_node.external.partitions and ((source_node.external.using and source_node.external.using|lower != 'delta') or not source_node.external.using) -%}
         {% set ddl %}
             ALTER TABLE {{ source(source_node.source_name, source_node.name) }} RECOVER PARTITIONS
         {% endset %}
@@ -18,9 +18,9 @@
 {% endmacro %}
 
 {% macro default__recover_partitions(source_node) %}
-    /*{# 
+    /*{#
         We're dispatching this macro so that users can override it if required on other adapters
-        but this will work for spark/databricks. 
+        but this will work for spark/databricks.
     #}*/
 
     {{ exceptions.raise_not_implemented('recover_partitions macro not implemented for adapter ' + adapter.type()) }}
