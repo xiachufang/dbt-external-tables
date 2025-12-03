@@ -2,8 +2,27 @@
 
     {%- set columns = source_node.columns.values() -%}
     {%- set external = source_node.external -%}
-    {%- set partitions = external.partitions -%}
+    {%- set raw_partitions = external.partitions -%}
     {%- set options = external.options -%}
+
+    {# Coerce partitions strings (dbt 1.7 + spark) back into mappings #}
+    {%- set partitions = [] -%}
+    {%- if raw_partitions -%}
+        {%- for partition in raw_partitions -%}
+            {%- if partition is string -%}
+                {%- set parsed = fromyaml(partition) -%}
+                {%- if parsed is mapping -%}
+                    {% do partitions.append(parsed) %}
+                {%- elif parsed is sequence -%}
+                    {%- for item in parsed -%}
+                        {% do partitions.append(item) %}
+                    {%- endfor -%}
+                {%- endif -%}
+            {%- else -%}
+                {% do partitions.append(partition) %}
+            {%- endif -%}
+        {%- endfor -%}
+    {%- endif -%}
 
 {# https://spark.apache.org/docs/latest/sql-data-sources-hive-tables.html #}
     create table {{source(source_node.source_name, source_node.name)}} 
